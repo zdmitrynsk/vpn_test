@@ -5,8 +5,9 @@ import 'package:vpn_test/features/data_vpns/bloc/data_vpns_bloc.dart';
 import 'package:vpn_test/features/data_vpns/mappers/vpn_list_composer/models/add_vpn_button_list_item.dart';
 import 'package:vpn_test/features/data_vpns/mappers/vpn_list_composer/models/empty_message_list_item.dart';
 import 'package:vpn_test/features/data_vpns/mappers/vpn_list_composer/models/search_field_list_item.dart';
-import 'package:vpn_test/features/data_vpns/mappers/vpn_list_composer/models/subtitle_vpn_list_item.dart';
-import 'package:vpn_test/features/data_vpns/mappers/vpn_list_composer/models/vpn_list_item.dart';
+import 'package:vpn_test/features/data_vpns/presentation/vpn_list_composer/vpn_card_items/subtitle_vpn_list_item.dart';
+import 'package:vpn_test/features/data_vpns/presentation/vpn_list_composer/vpn_card_items/vpn_list_item.dart';
+import 'package:vpn_test/features/data_vpns/mappers/vpn_list_composer/models/vpn_list_item_interface.dart';
 import 'package:vpn_test/repositories/vpn_catalog_repository/models/filter_type.dart';
 import 'package:vpn_test/features/data_vpns/presentation/vpn_list_composer/vpns_list.dart';
 import 'package:vpn_test/ui/widgets/add_vpn_button.dart';
@@ -42,17 +43,9 @@ class _AllVpnsScreenState extends State<AllVpnsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final tr = AutoTabsRouter.of(context);
-    if (_tabsRouter != tr) {
-      _tabsRouter?.removeListener(_onTabChanged);
-      _tabsRouter = tr;
-      _tabsRouter?.addListener(_onTabChanged);
-    }
+    _updateTabsRouter();
   }
-
-  void _initSearchController() {
-    _searchController.addListener(_onEventSearch);
-  }
+  
 
   @override
   void dispose() {
@@ -67,48 +60,21 @@ class _AllVpnsScreenState extends State<AllVpnsScreen> {
         bloc: _loadVpnsBloc,
         builder: (context, state) {
           if (state is LoadedDataVpnsState) {
-            return _loadedState(state);
+            return _loadedDataVpnsState(state);
           } else if (state is EmptySearchDataVpnsState) {
-            return _vpnsEmptyState();
+            return _emptySearchDataState();
           }
           return Container();
         });
   }
 
-  ListView _loadedState(LoadedDataVpnsState state) {
-    VpnsCardsList cards = defaultCards();
-    cards.items
-        .addAll(VpnsCardsList.fromVpnsInfoList(state.vpnsList, true).items);
-    return ListView.builder(
-        itemCount: cards.items.length,
-        itemBuilder: (context, index) => _buildItem(index, cards));
-  }
-
-  ListView _vpnsEmptyState() {
-    return ListView.builder(
-        itemCount: emptyCardsMessage().items.length,
-        itemBuilder: (context, index) =>
-            _buildItem(index, emptyCardsMessage()));
-  }
-
-  VpnsCardsList emptyCardsMessage() {
-    VpnsCardsList cardsList = VpnsCardsList();
-    cardsList.addItem(SearchFieldListItem());
-    cardsList.addItem(MessageListItem("Нет результатов",
-        "По вашему запросу серверов\nне найдено. Попробуйте изменить\nзапрос или проверьте написание"));
-    return cardsList;
-  }
-
-  VpnsCardsList defaultCards() {
-    VpnsCardsList baseCardsList = VpnsCardsList();
-    baseCardsList.addItem(SearchFieldListItem());
-    baseCardsList.addItem(SubtitleVpnListItem(subtitle: 'Мои точки доступа'));
-    baseCardsList.addItem(AddVpnButtonListItem());
-    return baseCardsList;
-  }
-
-  void _onEventSearch() {
-    _loadVpnsBloc.add(SearchDataVpnsEvent(_searchController.text, _filter));
+  void _updateTabsRouter() {
+    final tr = AutoTabsRouter.of(context);
+    if (_tabsRouter != tr) {
+      _tabsRouter?.removeListener(_onTabChanged);
+      _tabsRouter = tr;
+      _tabsRouter?.addListener(_onTabChanged);
+    }
   }
 
   void _onTabChanged() {
@@ -117,32 +83,71 @@ class _AllVpnsScreenState extends State<AllVpnsScreen> {
     }
   }
 
+  void _initSearchController() {
+    _searchController.addListener(_onEventSearch);
+  }
+
+  void _onEventSearch() {
+    _loadVpnsBloc.add(SearchDataVpnsEvent(_searchController.text, _filter));
+  }
+
+  ListView _loadedDataVpnsState(LoadedDataVpnsState state) {
+    VpnsCardsList cards = _defaultCards();
+    cards.items
+        .addAll(VpnsCardsList.fromVpnsInfoList(state.vpnsList, true).items);
+    return ListView.builder(
+        itemCount: cards.items.length,
+        itemBuilder: (context, index) => _buildItem(index, cards));
+  }
+
+  ListView _emptySearchDataState() {
+    return ListView.builder(
+        itemCount: _emptyCardsMessage().items.length,
+        itemBuilder: (context, index) =>
+            _buildItem(index, _emptyCardsMessage()));
+  }
+
+  VpnsCardsList _emptyCardsMessage() {
+    VpnsCardsList cardsList = VpnsCardsList();
+    cardsList.addItem(SearchFieldListItem());
+    cardsList.addItem(MessageListItem("Нет результатов",
+        "По вашему запросу серверов\nне найдено. Попробуйте изменить\nзапрос или проверьте написание"));
+    return cardsList;
+  }
+
+  VpnsCardsList _defaultCards() {
+    VpnsCardsList baseCardsList = VpnsCardsList();
+    baseCardsList.addItem(SearchFieldListItem());
+    baseCardsList.addItem(SubtitleVpnListItem(subtitle: 'Мои точки доступа'));
+    baseCardsList.addItem(AddVpnButtonListItem());
+    return baseCardsList;
+  }
+
   _buildItem(int index, VpnsCardsList vpnsList) {
-    Theme.of(context);
-    switch (vpnsList.items[index]) {
-      case SubtitleVpnListItem():
-        return SubtitleVpnList(
-            text: (vpnsList.items[index] as SubtitleVpnListItem).subtitle);
-      case VpnListItem():
-        var vpn = (vpnsList.items[index] as VpnListItem);
-        return CardVpnList(
-          id: vpn.id,
-          city: vpn.city,
-          ping: vpn.ping,
-          isActive: vpn.isActive,
-          isFavorite: vpn.isFavorite,
-          countryCode: vpn.countryCode,
-          onLikeTap: () {
-            _loadVpnsBloc.add(TogleFavoriteDataVpnsEvent(id: vpn.id));
-          },
-        );
-      case SearchFieldListItem():
-        return SearchField(_searchController);
-      case AddVpnButtonListItem():
-        return AddVpnButton();
-      case MessageListItem():
-        return Message("Нет результатов",
-            "По вашему запросы серверов\nне найдено. Попробуйте изменить\nзапрос или проверьте написание");
+    VpnListItemInterface item = vpnsList.items[index];
+    if (item is SubtitleVpnListItem) {
+      return SubtitleVpnList(
+          text: (item).subtitle);
+    } else if (item is VpnListItem) {
+      return CardVpnList(
+        id: item.id,
+        city: item.city,
+        ping: item.ping,
+        isActive: item.isActive,
+        isFavorite: item.isFavorite,
+        countryCode: item.countryCode,
+        onLikeTap: () {
+          _loadVpnsBloc.add(TogleFavoriteDataVpnsEvent(id: item.id));
+        },
+      );
+    } else if (item is SearchFieldListItem) {
+      return SearchField(_searchController);
+    } else if (item is AddVpnButtonListItem) {
+      return AddVpnButton();
+    } else if (item is MessageListItem) {
+      return Message("Нет результатов",
+          "По вашему запросы серверов\nне найдено. Попробуйте изменить\nзапрос или проверьте написание");
     }
+    return Container();
   }
 }

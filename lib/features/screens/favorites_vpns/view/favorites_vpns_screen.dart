@@ -42,16 +42,7 @@ class _FavoritesVpnsScreenState extends State<FavoriteVpnsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final tr = AutoTabsRouter.of(context);
-    if (_tabsRouter != tr) {
-      _tabsRouter?.removeListener(_onTabChanged);
-      _tabsRouter = tr;
-      _tabsRouter?.addListener(_onTabChanged);
-    }
-  }
-
-  void _initSearchController() {
-    _searchController.addListener(_onEventSearch);
+    _updateTabsRouter();
   }
 
   @override
@@ -60,24 +51,47 @@ class _FavoritesVpnsScreenState extends State<FavoriteVpnsScreen> {
     _tabsRouter?.removeListener(_onTabChanged);
     super.dispose();
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return BlocBuilder(
         bloc: _loadVpnsBloc,
         builder: (context, state) {
           if (state is LoadedDataVpnsState) {
-            return _loadedState(state);
+            return _loadedDataVpnsState(state);
           } else if (state is EmptySearchDataVpnsState) {
-            return _vpnsEmptySearchState();
+            return _emptySearchDataVpnsState();
           } else if (state is EmptyInitialDataVpnsState) {
-            return _vpnsEmptyInitialState();
+            return _emptyInitialDataVpnsState();
           }
           return Container();
         });
   }
 
-  ListView _loadedState(LoadedDataVpnsState state) {
+  void _initSearchController() {
+    _searchController.addListener(_onEventSearch);
+  }
+
+  void _onEventSearch() {
+    _loadVpnsBloc.add(SearchDataVpnsEvent(_searchController.text, _filter));
+  }
+
+  void _updateTabsRouter() {
+    final tr = AutoTabsRouter.of(context);
+    if (_tabsRouter != tr) {
+      _tabsRouter?.removeListener(_onTabChanged);
+      _tabsRouter = tr;
+      _tabsRouter?.addListener(_onTabChanged);
+    }
+  }
+
+  void _onTabChanged() {
+    if (_tabsRouter?.activeIndex == _routeTabIndex) {
+      _loadVpnsBloc.add(SearchDataVpnsEvent(_searchController.text, _filter));
+    }
+  }
+
+  ListView _loadedDataVpnsState(LoadedDataVpnsState state) {
     VpnsCardsList cards = _defaultCards();
     cards.items
         .addAll(VpnsCardsList.fromVpnsInfoList(state.vpnsList, false).items);
@@ -92,7 +106,7 @@ class _FavoritesVpnsScreenState extends State<FavoriteVpnsScreen> {
     return baseCardsList;
   }
 
-  ListView _vpnsEmptySearchState() {
+  ListView _emptySearchDataVpnsState() {
     var emptySearchMessageCards = _emptySearchMessageCards("Нет результатов",
         "По вашему запросу серверов\nне найдено. Попробуйте изменить\nзапрос или проверьте написание");
     return ListView.builder(
@@ -108,23 +122,13 @@ class _FavoritesVpnsScreenState extends State<FavoriteVpnsScreen> {
     return cardsList;
   }
 
-  _vpnsEmptyInitialState() {
+  _emptyInitialDataVpnsState() {
     var emptySearchMessageCards = _emptySearchMessageCards(
         "Нет результатов", "Пока что здесь пусто.\nДобавьте VPN");
     return ListView.builder(
         itemCount: emptySearchMessageCards.items.length,
         itemBuilder: (context, index) =>
             _buildItem(index, emptySearchMessageCards));
-  }
-
-  void _onEventSearch() {
-    _loadVpnsBloc.add(SearchDataVpnsEvent(_searchController.text, _filter));
-  }
-
-  void _onTabChanged() {
-    if (_tabsRouter?.activeIndex == _routeTabIndex) {
-      _loadVpnsBloc.add(SearchDataVpnsEvent(_searchController.text, _filter));
-    }
   }
 
   _buildItem(int index, VpnsCardsList vpnsList) {
