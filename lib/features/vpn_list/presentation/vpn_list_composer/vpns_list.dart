@@ -1,7 +1,7 @@
-import 'package:vpn_test/features/data_vpns/mappers/vpn_list_composer/models/vpn_list_item_interface.dart';
+import 'package:vpn_test/features/vpn_list/mappers/vpn_list_composer/models/vpn_list_item_interface.dart';
 import 'package:vpn_test/repositories/vpn_catalog_repository/models/vpn_info.dart';
-import 'package:vpn_test/features/data_vpns/presentation/vpn_list_composer/vpn_card_items/subtitle_vpn_list_item.dart';
-import 'package:vpn_test/features/data_vpns/presentation/vpn_list_composer/vpn_card_items/vpn_list_item.dart';
+import 'package:vpn_test/features/vpn_list/presentation/vpn_list_composer/vpn_card_items/subtitle_vpn_list_item.dart';
+import 'package:vpn_test/features/vpn_list/presentation/vpn_list_composer/vpn_card_items/vpn_list_item.dart';
 
 class VpnsCardsList {
   List<VpnListItemInterface> items = [];
